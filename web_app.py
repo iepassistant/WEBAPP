@@ -1,47 +1,66 @@
+import os
 import openai
 import streamlit as st
-import config
 
-# Set OpenAI API key
-openai.api_key = config.api_key
+# Get API key from environment variable
+api_key = os.environ.get("API_KEY")
+if api_key is None:
+    raise ValueError("API_KEY environment variable not set")
 
-st.markdown(
-    """
-    <style>
-    /* Add your CSS code here */
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Set API key for OpenAI
+openai.api_key = api_key
 
-def write_iep():
-    st.title("IEP Assist")
+st.title("IEP Assist Premium")
 
-def write_sidebar():
-    st.sidebar.title("What is IEP Assist?")
-    st.sidebar.info(
-        "IEP Assist generates responses using OpenAI's language generation technology. The technology uses machine learning algorithms trained on large amounts of text data to generate new text based on a given prompt. In the case of IEP Assist, the prompt consists of the student data entered by the user (academic, functional, behavioral information), and the technology generates a Present Levels of Academic Achievement and Functional Performance (PLAAFP) for the student based on the data.")
-        
-    # Add a text area
-    user_query = st.text_area("Enter student data (ie. academic, functional, behavioral). To ensure that the generated PLAAFP statement accurately reflects the student's needs and abilities, it is important to provide as much relevant information as possible:", height=250)
+# Add a sidebar with instructions
+st.sidebar.title("Instructions")
+st.sidebar.write("1. Select the student's grade level.")
+st.sidebar.write("2. Select the student's qualifying condition.")
+st.sidebar.write("3. Choose a prompt to generate a PLAAFP statement.")
+st.sidebar.write("4. Enter student data.")
+st.sidebar.write("5. Click the 'Analyze' button to generate the statement.")
 
-    # Add a submit button
-    if st.button("Analyze"):
-        # Use OpenAI to generate IEP based on student
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt= "You are a special education case manager, the following data has been collected. Analyze and summarize this data into a cohesive PLAAFP statement, make it clear and concise and provide areas of strength and areas of need and strageties to improve areas of need: \n" + user_query,
-            max_tokens=2048,
-            n=1,
-            stop=None,
-            temperature=0.8
-        )
-        iep = response["choices"][0]["text"]
-        st.write(iep)
+st.sidebar.write("")
+st.sidebar.write("")
 
-def main():
-    write_iep()
-    write_sidebar()
+st.sidebar.write("Note: This app uses OpenAI's GPT-3 API to generate the PLAAFP statement. Please enter data that is relevant and appropriate for generating the statement.")
 
-if __name__ == "__main__":
-    main()
+# Add a horizontal line for separation
+st.write("---")
+
+# Select the student's grade level
+st.write("Select the student's grade level:")
+grade_level = st.selectbox("Grade:", ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], key="grade-level")
+
+# Select the student's qualifying condition
+st.write("Select the student's qualifying condition:")
+qualifying_condition = st.multiselect("Qualifying Condition:", ["Specific Learning Disability", "Emotional Disturbance", "Autism", "Intellectual Disability", "Speech/Language Impairment", "Other Health Impairment", "Orthopedic Impairment", "Traumatic Brain Injury", "Deafness", "Blindness", "Developmental Delay"], key="qualifying-condition")
+
+# Choose a prompt
+st.write("Choose a prompt:")
+prompts = [    "Analyze the data provided on the student and provide a summary of their strengths and areas of need in regards to their academic performance.",    "Provide a summary of the student's behavior data and suggest possible interventions to try based on their areas of need.",    "Summarize the data provided on the student's academic performance, highlighting their strengths and areas of need, and suggesting possible interventions to try."]
+selected_prompt = st.selectbox("Prompt:", options=prompts, key="prompt")
+
+st.write("Enter student data:")
+student_data = st.text_area("Paste data here", height=250, key="student-data")
+
+# Add a button to generate the PLAAFP statement
+if st.button("Analyze", key="analyze-button"):
+    # Set OpenAI API key
+    openai.api_key = api_key
+
+    # Call the OpenAI API and generate a response
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=f"{selected_prompt} {student_data} {grade_level} {qualifying_condition}",
+        max_tokens=2000,
+        n=1,
+        stop=None,
+        temperature=0.85,
+    )
+
+    # Extract the generated statement from the API response
+    statement = response["choices"][0]["text"]
+
+    # Show the generated statement
+    st.write("PLAAFP statement:", statement)
